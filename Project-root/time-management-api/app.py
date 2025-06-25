@@ -1,21 +1,15 @@
 from flask import Flask, request, jsonify
 import psycopg2
+from config import config
 
 app = Flask(__name__)
-
-# Azure PostgreSQL connection
-conn = psycopg2.connect(
-    host="db-timereport.postgres.database.azure.com",
-    database="timereport",
-    user="ghostbusters",
-    password="Kanyeisreal1",
-    sslmode="require"
-)
 
 from datetime import datetime, timedelta
 
 @app.route('/api/time-entry', methods=['POST'])
 def add_time_entry():
+    params = config()
+    conn = psycopg2.connect(**params)
     data = request.get_json()
 
     report_date = data['reportDate']           # e.g. "2025-06-25"
@@ -58,6 +52,8 @@ def add_time_entry():
 
 @app.route('/api/consultant', methods=['POST'])
 def add_consultant():
+    params = config()
+    conn = psycopg2.connect(**params)
     data = request.get_json()
     consultant_name = data['consultantName']
 
