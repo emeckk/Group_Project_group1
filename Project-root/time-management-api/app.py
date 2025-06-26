@@ -113,24 +113,30 @@ from datetime import timedelta
 
 @app.route('/api/consultant', methods=['GET'])
 def get_consultants():
-    command = "SELECT * FROM consultants order by id;"
+    command = "SELECT * FROM consultants;"
     try:
         params = config()
         conn = psycopg2.connect(**params)
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(command)
         rows = cur.fetchall()
-
         colnames = [desc[0] for desc in cur.description]
-        result = []
-        for row in rows:
-            row_dict = {}
-            for col, val in zip(colnames, row):
-                if isinstance(val, timedelta):
-                    row_dict[col] = str(val)  
-                else:
-                    row_dict[col] = val
-            result.append(row_dict)
+
+        # Helper to format timedelta consistently
+        def format_timedelta(td):
+            if isinstance(td, timedelta):
+                total_seconds = int(td.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                return f"{hours:02}:{minutes:02}:{seconds:02}"
+            return td
+
+        # Build JSON-safe result
+        result = [
+            {col: format_timedelta(val) if isinstance(val, timedelta) else val for col, val in zip(colnames, row)}
+            for row in rows
+        ]
 
         cur.close()
         conn.close()
