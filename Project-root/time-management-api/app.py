@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import psycopg2
 from config import config
-
+from datetime import timedelta, time
 app = Flask(__name__) # Create a Flask application instance
 
 #For adding a new row in time_entry via POSTMAN
@@ -16,14 +16,13 @@ def add_time_entry():
     end_time = data['endTime'] #Time           
     lunch_break = data['lunchBreak'] #Interval
     consultant_id = data['consultantId'] #foreign key id that connects the entry to consultants table
-    customer_name = data['customerName'] #Teeext
 
     #Insert the data into the time_entries table
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO time_entries (report_date, start_time, end_time, lunch_break, consultant_id, customer_name)
-        VALUES (%s, %s, %s, %s::interval, %s, %s)
-    """, (report_date, start_time, end_time, lunch_break, consultant_id, customer_name))
+        INSERT INTO time_entries (report_date, start_time, end_time, lunch_break, consultant_id)
+        VALUES (%s, %s, %s, %s::interval, %s)
+    """, (report_date, start_time, end_time, lunch_break, consultant_id))
 
     #Calculate the working time, start_time to end_time - the lunch break time and
     #update the said consultants time_balance based on this value
@@ -50,21 +49,33 @@ def add_time_entry():
 
 
 @app.route('/api/time-entry', methods=['GET'])
-def get_time_entry():
-    params = config()
-    conn = psycopg2.connect(**params) #connect to the db
-    data = request.get_json() #Parse JSON data from the post request
+def get_time_entries():
+    command = "SELECT * FROM time_entries ORDER BY consultant_id;"
+    try:
+        params = config()
+        conn = psycopg2.connect(**params)
+        cur = conn.cursor()
+        cur.execute(command)
+        rows = cur.fetchall()
+        colnames = [desc[0] for desc in cur.description]
 
-    #Get the data from the time_entries table
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT * FROM time_entries)
-    """,)
+        # Convert time and timedelta objects to string for JSON
+        result = [
+            {
+                col: str(val) if isinstance(val, (timedelta, time)) else val
+                for col, val in zip(colnames, row)
+            }
+            for row in rows
+        ]
 
-    conn.commit()
-    cur.close()
+        cur.close()
+        conn.close()
+        return jsonify(result)
 
-    return jsonify({"message": "Current state of time_entries table"}), 201
+    except Exception as error:
+        print("ERROR in get_time_entries():", error)
+        return jsonify({"error": str(error)}), 500
+
 
 #For adding a new row in consultant via POSTMAN
 #name TEXT and time_balance, time balance is 0 to start of with for new consultants
@@ -75,15 +86,17 @@ def add_consultant():
 
     data = request.get_json() #parse JSON data from the post request
     consultant_name = data['consultantName']
+    customer_name = data['customerName'] #Teeext
 
+    
     #Insert the data into the consultants table
     try:
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO consultants (name)
-            VALUES (%s)
+            INSERT INTO consultants (name, customer_name)
+            VALUES (%s, %s)
             RETURNING id
-        """, (consultant_name,))
+        """, (consultant_name, customer_name))
         consultant_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -96,22 +109,37 @@ def add_consultant():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+from datetime import timedelta
+
 @app.route('/api/consultant', methods=['GET'])
 def get_consultants():
-    params = config()
-    conn = psycopg2.connect(**params) #connect to the db
-    data = request.get_json() #Parse JSON data from the post request
+    command = "SELECT * FROM consultants order by id;"
+    try:
+        params = config()
+        conn = psycopg2.connect(**params)
+        cur  = conn.cursor()
+        cur.execute(command)
+        rows = cur.fetchall()
 
-    #Get the data from the time_entries table
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT * FROM consultants
-    """,)
+        colnames = [desc[0] for desc in cur.description]
+        result = []
+        for row in rows:
+            row_dict = {}
+            for col, val in zip(colnames, row):
+                if isinstance(val, timedelta):
+                    row_dict[col] = str(val)  
+                else:
+                    row_dict[col] = val
+            result.append(row_dict)
 
-    conn.commit()
-    cur.close()
+        cur.close()
+        conn.close()
+        return jsonify(result)
 
-    return jsonify({"message": "Current state of consultants table"}), 201
+    except Exception as error:
+        print("ERROR in get_consultants():", error)
+        return jsonify({"error": str(error)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)
