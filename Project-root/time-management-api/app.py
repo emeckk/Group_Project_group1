@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import psycopg2
 from config import config
 from datetime import timedelta, time
+
 app = Flask(__name__) # Create a Flask application instance
 
 #For adding a new row in time_entry via POSTMAN
