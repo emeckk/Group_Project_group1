@@ -4,4 +4,5 @@ def main():
     generate_report()
     #upload_blob()
 
-main()
+if __name__ == "__main__":
+    main()

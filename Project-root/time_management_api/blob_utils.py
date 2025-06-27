@@ -1,6 +1,4 @@
 from azure.storage.blob import BlobServiceClient
-
-
 from azure.storage.blob import BlobServiceClient
 from config import config
 
@@ -16,7 +14,7 @@ def upload_blob():
 
 
     # Name of the blob (filename in Azure)
-    local_file_path = r"C:\Users\User\Documents\GitHub\Group_Project_group1\Project-root\reporting-app\report.txt"
+    local_file_path = r"C:\Users\User\Documents\GitHub\Group_Project_group1\Project-root\time_management_api\report.txt"
 
     blob_name = "report.txt"
     

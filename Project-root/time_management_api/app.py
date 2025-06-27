@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import psycopg2
 from config import config
 from datetime import timedelta, time
+from db_utils import generate_report
+from blob_utils import upload_blob
 
 app = Flask(__name__) # Create a Flask application instance
 
@@ -146,6 +148,21 @@ def get_consultants():
     except Exception as error:
         print("ERROR in get_consultants():", error)
         return jsonify({"error": str(error)}), 500
+    
+
+#For adding a new row in consultant via POSTMAN
+#name TEXT and time_balance, time balance is 0 to start of with for new consultants
+@app.route('/api/report', methods=['POST'])
+def create_and_upload_report():
+    try:
+        generate_report()
+        upload_blob()
+        return jsonify({"message": "Report generated and uploaded successfully."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 
 
 if __name__ == "__main__":
