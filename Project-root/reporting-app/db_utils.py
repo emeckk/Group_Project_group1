@@ -86,4 +86,4 @@ def generate_report(filename="report.txt"):
 
     cur.close()
     conn.close()
-    print(f"✅ Report written to {filename}")
+    print(f"Report written to {filename}")
